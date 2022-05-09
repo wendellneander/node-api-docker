@@ -1,0 +1,1 @@
+/usr/bin/env bash -c /wait-for-it.sh

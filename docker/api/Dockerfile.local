@@ -1,0 +1,12 @@
+FROM node
+
+WORKDIR /usr/src/app
+
+COPY ./src/api/package.json /usr/src/app
+RUN yarn install
+
+COPY ./src/api /usr/src/app
+
+EXPOSE 80
+
+CMD ["node", "main.js"]

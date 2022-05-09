@@ -1,0 +1,78 @@
+version: "3.8"
+
+networks:
+  default:
+    name: ${APP_NAME}-network
+
+services:
+  web:
+    container_name: ${APP_NAME}-web
+    build: 
+      context: .
+      dockerfile: ./docker/web/Dockerfile.local
+    volumes: 
+      - ./src/web:/app
+
+  mysql:
+    container_name: ${APP_NAME}-mysql
+    image: mysql:5.7
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8 --collation-server=utf8_general_ci
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    expose:
+      - ${DB_PORT}
+    volumes:
+      - ./docker/database/data:/docker-entrypoint-initdb.d:rw
+
+  api:
+    depends_on:
+      - web
+      - mysql
+    container_name: ${APP_NAME}-api
+    build:
+      context: .
+      dockerfile: ./docker/api/Dockerfile.local
+    restart: always
+    links:
+      - mysql
+    volumes:
+      - ./src/api:/usr/src/app
+
+  nginx:
+    depends_on:
+      - web
+      - api
+    container_name: ${APP_NAME}-nginx
+    hostname: nginx
+    build:
+      dockerfile: ./docker/nginx/Dockerfile.local
+      context: .
+    volumes:
+      - ./src:/var/www/html
+    ports:
+      - 80:80
+    links:
+      - web
+      - api
+
+  phpmyadmin:
+    depends_on:
+      - mysql
+    container_name: ${APP_NAME}-phpmyadmin
+    restart: always
+    image: phpmyadmin:latest
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=${DB_HOST}
+      - PMA_USER=${DB_USER}
+      - PMA_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "7070:80"
+    volumes:
+      - /sessions
+    logging:
+      driver: none
+    links:
+      - mysql
